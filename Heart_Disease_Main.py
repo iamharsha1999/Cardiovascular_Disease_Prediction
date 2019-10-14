@@ -64,7 +64,7 @@ final=singledf.transpose()
 
 
 
-##Predictiom
+##Prediction
 weights_path = '/home/harsha/Machine_Learning_Project/AI_J_Component/Weights/weights-improvement-82-0.73.hdf5'
 model.load_weights(weights_path)
 result = model.predict(final)
