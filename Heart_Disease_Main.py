@@ -1,5 +1,5 @@
 from keras.models import Sequential
-from keras.layers import Dense
+from keras.layers import Dense, BatchNormalization
 from keras.callbacks import ModelCheckpoint
 from sklearn.preprocessing import MinMaxScaler
 import pandas as pd
@@ -9,10 +9,13 @@ def nn_model():
     model = Sequential()
 
     model.add(Dense(32,   input_dim = 11))
+    model.add(BatchNormalization())
 
-    # model.add(Dense(16, activation='relu'))
+    model.add(Dense(16, activation='relu'))
+    model.add(BatchNormalization())
 
     model.add(Dense(8, activation='relu'))
+    model.add(BatchNormalization())
 
     model.add(Dense(1, activation='sigmoid'))
 
@@ -46,7 +49,7 @@ cholesterol= int(input('Enter the Cholesterol (1:Normal 2:Above Normal 3:Well Ab
 gluc= int(input('Enter Glucose (1:Normal 2:Above Normal 3:Well Above Normal)')) # 1: normal, 2: above normal, 3: well above normal
 smoke= int(input('Enter the Smoking Habit (0: Smoke 1:Doesnt Smoke)')) # 1 if you smoke, 0 if not
 alco= int(input('Enter the Alcoholic Habit (0:Alcholic 1:Not Alcholoic)')) # 1 if you drink alcohol, 0 if not
-active= int(input('Enter the Physical Acitivity (0:Physically Active 1:Physically Not Active')) # 1 if you do physical activity, 0 if not
+active= int(input('Enter the Physical Acitivity (0:Physically Active 1:Physically Not Active)')) # 1 if you do physical activity, 0 if not
 
 
 
@@ -64,8 +67,8 @@ final=singledf.transpose()
 
 
 
-##Prediction
-weights_path = '/home/harsha/Machine_Learning_Project/AI_J_Component/Weights/weights-improvement-82-0.73.hdf5'
+##Predictiom
+weights_path = '/home/harsha/Machine_Learning_Project/AI_J_Component/Weights/weights-improvement-03-1.00.hdf5'
 model.load_weights(weights_path)
 result = model.predict(final)
 
