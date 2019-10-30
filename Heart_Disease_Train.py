@@ -1,101 +1,77 @@
-##Importing All the Required Packages
+import re, string
+from nltk import sent_tokenize, word_tokenize
+from keras.preprocessing.text import Tokenizer
+from keras.preprocessing.sequence import pad_sequences
+from keras.utils import to_categorical, plot_model
+from keras.layers import LSTM,Dense, Embedding
 from keras.models import Sequential
-from keras.layers import Dense, BatchNormalization
-from keras.callbacks import ModelCheckpoint
-from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import MinMaxScaler
-import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 
 
-## Creating the Model Architecture
-def nn_model():
-    model = Sequential()
-    ## ReLu Block 1
-    model.add(Dense(32,   input_dim = 11))
-    model.add(BatchNormalization())
+def read_file(filepath):
+    file = open(filepath, 'rt')
+    text_data = file.read()
+    file.close()
 
-    ##ReLu Block 2
-    model.add(Dense(16, activation='relu'))
-    model.add(BatchNormalization())
+    return text_data
 
-    ##ReLu Block 3
-    model.add(Dense(8, activation='relu'))
-    model.add(BatchNormalization())
-
-    ##Sigmoid Output Layer
-    model.add(Dense(1, activation='sigmoid'))
-
-    return model
-
-## Filepath of the CSV File
-csv_file_path = '/home/harsha/Machine_Learning_Project/AI_J_Component/cardio_train.csv'
-df = pd.read_csv(csv_file_path, delimiter=';')
-df = df.dropna()
-df = df.iloc[:,1:13]
-print(df.head())
-print('Total No Of Rows: {}'.format(df.shape[0]))
-print('Total No of Columns: {}'.format(df.shape[1]))
-
-## Scaling the data
-scaler = MinMaxScaler(feature_range=(0,1))
-df =  scaler.fit_transform(df)
-
-##Plotting the Correlation Matrix
-# corr = df.corr()
-# fig = plt.figure()
-# ax = fig.add_subplot(111)
-# cax = ax.matshow(corr, vmin=-1, vmax=1)
-# fig.colorbar(cax)
-# ticks = numpy.arange(0,13,1)
-# ax.set_xticks(ticks)
-# ax.set_yticks(ticks)
-# plt.show()
-
-## Splitting the Dataset
-x_train,x_val,y_train,y_val = train_test_split(df[:,1:12],df[:,-1], test_size= 0.3, random_state=32)
+filename = '/home/harsha/Natural Language Processing/DataSet/Mark Twain- Yankee Connecticut.txt'
+text_data = read_file(filename)
 
 
-##Creating Checkpoints
-weights = '/home/harsha/Machine_Learning_Project/AI_J_Component/Weights/weights-improvement-{epoch:02d}-{val_acc:.2f}.hdf5'
-checkpoints = ModelCheckpoint(weights, verbose= 1, monitor= 'val_acc', save_best_only= True, mode = 'max')
-callbacks = [checkpoints]
 
-epochs = 100
-batch_size = 1024
+sentences = sent_tokenize(text_data)
 
-##Compiling the Model
-model = nn_model()
-model.compile(loss = 'binary_crossentropy', optimizer='Nadam', metrics=['accuracy'])
+##======= Splitting the Text Document Into Token ======##
+tokenizer = Tokenizer(num_words=20000,oov_token= "oov", lower = False)
+tokenizer.fit_on_texts(sentences)
+vocab = tokenizer.word_index
+print("No Of Words: " + str(len(vocab)))
+word_freq = tokenizer.word_counts
+nod = tokenizer.word_docs
+
+##======= Dataset Preparation ==========##
+input_sequences = []
+for sent in sentences:
+    token_list = tokenizer.texts_to_sequences([sent])[0]
+    for i in range(1, len(token_list)):
+        n_gram = token_list[:i+1]
+        input_sequences.append(n_gram)
+
+max_length = max(len(x) for x in input_sequences)
+input_sequences = np.array(pad_sequences(input_sequences, maxlen=max_length, padding= 'pre'))
+
+x,y = input_sequences[:,:-1], input_sequences[:,-1]
+y = to_categorical(y, num_classes= len(vocab)+1)
+
+##========= Model Definition ============##
+model = Sequential()
+model.add(Embedding(len(vocab)+1,10,input_length=max_length-1))
+model.add(LSTM(32))
+model.add(Dense(len(vocab)+1, activation = 'softmax'))
+model.compile(loss='categorical_crossentropy',optimizer='adam')
+plot_model(model, to_file='NLP_Model.png')
+
 model.summary()
-model.fit(x_train,y_train, epochs= epochs, batch_size= batch_size, verbose = 1, callbacks= callbacks, validation_data=(x_val, y_val))
+history = model.fit(x,y,epochs=100,verbose=1,batch_size=10000)
 
+##Plotting the Training
+# Plot training & validation accuracy values
+plt.plot(history.history['acc'])
+plt.plot(history.history['val_acc'])
+plt.title('Model accuracy')
+plt.ylabel('Accuracy')
+plt.xlabel('Epoch')
+plt.legend(['Train', 'Test'], loc='upper left')
+plt.show()
 
-## Taking the input from the user
-# test = []
-# test.append(int(input('Enter the Age:')) * 365)
-# test.append(int(input('Enter the Gender (1:Male 2:Female) : ')))
-# test.append(int(input('Enter the Height in cms: ')))
-# test.append(int(input('Enter the Weight in Kgs: ')))
-# test.append(150)
-# test.append(80)
-# test.append(int(input('Enter the Cholesterol (1:Normal 2:Above Normal 3:Well Above Normal)')))
-# test.append(int(input('Enter Glucose (1:Normal 2:Above Normal 3:Well Above Normal)')))
-# test.append(int(input('Enter the Smoking Habit (0: Smoke 1:Doesnt Smoke)')))
-# test.append(int(input('Enter the Alcoholic Habit (0:Alcholic 1:Not Alcholoic)')))
-# test.append(int(input('Enter the Physical Acitivity (0:Physically Active 1:Physically Not Active')))
-# df.append(test)
-# df =  scaler.fit_transform(df)
-#
+# Plot training & validation loss values
+plt.plot(history.history['loss'])
+plt.plot(history.history['val_loss'])
+plt.title('Model loss')
+plt.ylabel('Loss')
+plt.xlabel('Epoch')
+plt.legend(['Train', 'Test'], loc='upper left')
+plt.show()
 
-##Predictiom
-# weights_path = '/home/harsha/Machine_Learning_Project/AI_J_Component/Weights/weights-improvement-82-0.73.hdf5'
-# model.load_weights(weights_path)
-# result = model.predict(np.expand_dims(df[-1], axis =0))
-# print(df[-1])
-# print('The Probablity is :{}'.format(result))
-# if result>0.7:
-#     print('Has a cardiovascular Disease')
-# else:
-#     print('Doesnt Have a Cardiovascular Disease')
